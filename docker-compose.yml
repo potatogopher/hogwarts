@@ -1,0 +1,42 @@
+version: '2'
+services:
+  mysqldb:
+      image: mysql:5.7
+      container_name: mysqldb
+      command: mysqld --user=root --verbose
+      volumes:
+        - ./schemadump.sql:/docker-entrypoint-initdb.d/schemadump.sql
+      ports:
+        - "3306:3306"
+      environment:
+        MYSQL_DATABASE: "test"
+        MYSQL_USER: "test"
+        MYSQL_PASSWORD: "test"
+        MYSQL_ROOT_PASSWORD: "root"
+        MYSQL_ALLOW_EMPTY_PASSWORD: "yes"
+  server:
+    build:
+      context: ./server/
+    command: /usr/app/node_modules/.bin/nodemon ./index.js
+    volumes:
+      - ./server/:/usr/app
+      - /usr/app/node_modules
+    ports:
+      - "8080:8080"
+    # env_file: ./server/.env # TODO - uncomment this to auto-load your .env file!
+    environment:
+      - NODE_ENV=development
+      - CHOKIDAR_USEPOLLING=true
+    depends_on:
+      - mysqldb
+  client:
+    build:
+      context: ./public/
+    command: npm run react
+    volumes:
+      - ./public/:/usr/app
+      - /usr/app/node_modules
+    depends_on:
+      - server
+    ports:
+      - "3000:3000"
